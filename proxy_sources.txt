@@ -1,0 +1,16 @@
+# 在线代理源配置
+# 格式: type|url 或直接 url（自动检测类型）
+# 支持类型: http, https, socks4, socks5
+# 每日 00:00 和 12:00 自动获取并验证
+
+# HTTP 代理
+http|https://raw.githubusercontent.com/ErcinDedeoglu/proxies/refs/heads/main/proxies/http.txt
+
+# HTTPS 代理
+https|https://raw.githubusercontent.com/ErcinDedeoglu/proxies/refs/heads/main/proxies/https.txt
+
+# SOCKS4 代理
+socks4|https://raw.githubusercontent.com/ErcinDedeoglu/proxies/refs/heads/main/proxies/socks4.txt
+
+# SOCKS5 代理
+socks5|https://raw.githubusercontent.com/ErcinDedeoglu/proxies/refs/heads/main/proxies/socks5.txt
