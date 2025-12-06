@@ -28,6 +28,7 @@ mkdir proxy-pool && cd proxy-pool
 # 下载配置文件
 curl -O https://raw.githubusercontent.com/GLH08/ProxyPool/main/docker-compose.prod.yml
 curl -O https://raw.githubusercontent.com/GLH08/ProxyPool/main/subscriptions.txt
+curl -O https://raw.githubusercontent.com/GLH08/ProxyPool/main/proxy_sources.txt
 
 # 编辑订阅配置
 vim subscriptions.txt  # 每行一个订阅 URL

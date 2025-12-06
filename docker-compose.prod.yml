@@ -11,6 +11,7 @@ services:
     volumes:
       - ./config:/app/config
       - ./subscriptions.txt:/app/subscriptions.txt:ro
+      - ./proxy_sources.txt:/app/proxy_sources.txt:ro
     environment:
       - TZ=Asia/Shanghai
       - TOP_N_NODES=50
