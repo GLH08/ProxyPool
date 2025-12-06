@@ -161,3 +161,16 @@ cython_debug/
 .idea/
 .logs/gpt_logs
 /glider/
+
+# IDE / Editor
+.vscode/
+.cursor/
+.kiro/
+*.swp
+*.swo
+*~
+
+# Local config (not for git)
+config/
+http_alive.txt
+https_alive.txt

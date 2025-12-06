@@ -23,6 +23,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # 复制项目文件
 COPY scheduler.py subscription_parser.py ./
+COPY templates/ ./templates/
 
 RUN mkdir -p /app/config
 

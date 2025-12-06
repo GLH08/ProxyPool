@@ -88,7 +88,7 @@ def parse_ss(uri: str) -> Optional[Dict[str, Any]]:
             if ':' not in userinfo:
                 try:
                     userinfo = _b64_decode(userinfo).decode('utf-8')
-                except:
+                except Exception:
                     pass
             if ':' not in userinfo:
                 return None
@@ -103,7 +103,7 @@ def parse_ss(uri: str) -> Optional[Dict[str, Any]]:
                 userinfo, hostport = decoded.rsplit('@', 1)
                 method, password = userinfo.split(':', 1)
                 host, port = hostport.split(':')
-            except:
+            except Exception:
                 return None
         
         return {
@@ -456,18 +456,32 @@ def parse_clash_proxies(proxies: List[Dict]) -> List[Dict[str, Any]]:
     return outbounds
 
 
-def fetch_subscription(url: str) -> List[Dict[str, Any]]:
-    """获取并解析订阅"""
+def fetch_subscription(url: str, max_retries: int = 3) -> List[Dict[str, Any]]:
+    """获取并解析订阅（带重试）"""
     if requests is None:
         return []
     
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    
+    last_error = None
+    for attempt in range(max_retries):
+        try:
+            resp = requests.get(url, timeout=CFG.request_timeout, verify=False)
+            resp.raise_for_status()
+            text = resp.text.strip()
+            break
+        except Exception as e:
+            last_error = e
+            if attempt < max_retries - 1:
+                import time
+                time.sleep(2 ** attempt)  # 指数退避
+            continue
+    else:
+        print(f"获取订阅失败 {url[:50]}... (重试{max_retries}次): {last_error}")
+        return []
+    
     try:
-        import urllib3
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        
-        resp = requests.get(url, timeout=CFG.request_timeout, verify=False)
-        resp.raise_for_status()
-        text = resp.text.strip()
         
         # 尝试解析为 YAML
         if text.startswith('proxies:') or 'proxies:' in text[:200]:
@@ -479,7 +493,7 @@ def fetch_subscription(url: str) -> List[Dict[str, Any]]:
         try:
             if re.fullmatch(r'[A-Za-z0-9+/=_-]+', ''.join(text.split())):
                 text = _b64_decode(text).decode('utf-8', errors='ignore')
-        except:
+        except Exception:
             pass
         
         # 逐行解析
@@ -491,7 +505,7 @@ def fetch_subscription(url: str) -> List[Dict[str, Any]]:
         
         return outbounds
     except Exception as e:
-        print(f"获取订阅失败 {url[:50]}...: {e}")
+        print(f"解析订阅失败 {url[:50]}...: {e}")
         return []
 
 
@@ -592,7 +606,7 @@ def fetch_proxy_list_from_url(url: str) -> List[tuple]:
                     username = parts[2] if len(parts) >= 4 else None
                     password = parts[3] if len(parts) >= 4 else None
                     proxy_list.append((host, port, username, password))
-            except:
+            except Exception:
                 continue
         
         return proxy_list
@@ -797,7 +811,7 @@ def fetch_all_subscriptions() -> tuple:
     load_online = ENABLE_ONLINE_SOURCES
     if 'FORCE_ONLINE_SOURCES' in os.environ:
         load_online = os.environ.get('FORCE_ONLINE_SOURCES', 'false').lower() == 'true'
-        del os.environ['FORCE_ONLINE_SOURCES']  # 用完删除
+        os.environ.pop('FORCE_ONLINE_SOURCES', None)  # 安全删除
     
     if load_online:
         max_per_source = int(os.environ.get('MAX_PER_SOURCE', '30'))

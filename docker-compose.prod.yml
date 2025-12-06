@@ -1,0 +1,23 @@
+# 生产环境部署配置 - 从 GHCR 拉取镜像
+# 使用方法: docker compose -f docker-compose.prod.yml up -d
+
+services:
+  proxy-pool:
+    image: ghcr.io/glh08/proxypool:latest
+    container_name: proxy-pool
+    restart: unless-stopped
+    ports:
+      - "8012:8080"    # Web UI
+    volumes:
+      - ./config:/app/config
+      - ./subscriptions.txt:/app/subscriptions.txt:ro
+    environment:
+      - TZ=Asia/Shanghai
+      - TOP_N_NODES=50
+      - INTERVAL_SECONDS=1800
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8080/api/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

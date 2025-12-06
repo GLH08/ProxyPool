@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>代理池控制台</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+        .header { background: #1e293b; padding: 15px 20px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 18px; color: #f1f5f9; }
+        .header-btns { display: flex; gap: 10px; }
+        .tabs { display: flex; background: #1e293b; border-bottom: 1px solid #334155; }
+        .tab { padding: 12px 20px; cursor: pointer; color: #94a3b8; border-bottom: 2px solid transparent; }
+        .tab:hover { color: #e2e8f0; }
+        .tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+        .content { padding: 20px; max-width: 1600px; margin: 0 auto; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .card { background: #1e293b; border-radius: 8px; padding: 15px; margin-bottom: 15px; border: 1px solid #334155; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+        .stat { background: #0f172a; padding: 12px; border-radius: 6px; text-align: center; }
+        .stat-label { color: #64748b; font-size: 11px; text-transform: uppercase; }
+        .stat-value { font-size: 20px; font-weight: 700; color: #f1f5f9; margin-top: 4px; }
+        .running { color: #22c55e; }
+        .btn { background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        .btn:hover { background: #2563eb; }
+        .btn-green { background: #22c55e; }
+        .btn-green:hover { background: #16a34a; }
+        .btn-sm { padding: 5px 10px; font-size: 11px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #334155; }
+        th { background: #0f172a; color: #64748b; font-weight: 600; position: sticky; top: 0; }
+        tr:hover { background: #334155; cursor: pointer; }
+        .table-wrap { max-height: 500px; overflow-y: auto; }
+        .vless { color: #22d3ee; } .vmess { color: #a855f7; } .trojan { color: #f97316; }
+        .shadowsocks { color: #3b82f6; } .http { color: #10b981; } .socks { color: #ec4899; }
+        .log-wrap { background: #0f172a; border-radius: 6px; padding: 10px; max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 11px; }
+        .log-line { padding: 4px 0; border-bottom: 1px solid #1e293b; display: flex; gap: 8px; }
+        .log-time { color: #64748b; min-width: 70px; }
+        .log-level { min-width: 45px; font-weight: 600; }
+        .log-level.INFO { color: #3b82f6; } .log-level.ERROR { color: #ef4444; } .log-level.WARN { color: #eab308; }
+        .log-msg { color: #cbd5e1; word-break: break-all; }
+        .req-log { display: grid; grid-template-columns: 70px 1fr 130px 150px 50px 100px; gap: 8px; padding: 6px 0; border-bottom: 1px solid #1e293b; font-size: 11px; }
+        .req-log span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .exit-ip { color: #22c55e; font-weight: 600; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100; }
+        .modal.show { display: flex; justify-content: center; align-items: center; }
+        .modal-content { background: #1e293b; border-radius: 8px; padding: 20px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; margin-bottom: 15px; }
+        .modal-close { background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; }
+        pre { background: #0f172a; padding: 15px; border-radius: 6px; overflow-x: auto; font-size: 12px; color: #22d3ee; }
+        code { font-family: 'Monaco', 'Consolas', monospace; }
+        .current-node { background: #065f46; border: 1px solid #10b981; padding: 10px; border-radius: 6px; margin-top: 10px; }
+        .usage-box { background: #1e3a5f; padding: 12px; border-radius: 6px; margin-top: 10px; border: 1px solid #3b82f6; font-size: 12px; }
+        .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        @media (max-width: 900px) { .row2 { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌐 代理池控制台 <span style="font-size:12px;color:#64748b;">(sing-box)</span></h1>
+        <div class="header-btns">
+            <button class="btn btn-green" onclick="switchNode()">🔀 切换节点</button>
+            <button class="btn" onclick="testProxy()">🧪 测试</button>
+            <button class="btn" onclick="location.reload()">🔄 刷新</button>
+        </div>
+    </div>
+    
+    <div class="tabs">
+        <div class="tab active" onclick="showTab('overview')">📊 概览</div>
+        <div class="tab" onclick="showTab('nodes')">📋 节点</div>
+        <div class="tab" onclick="showTab('top')">🏆 Top节点</div>
+        <div class="tab" onclick="showTab('logs')">📝 日志</div>
+        <div class="tab" onclick="showTab('api')">🔌 API</div>
+    </div>
+
+    <div class="content">
+        <!-- 概览 -->
+        <div id="tab-overview" class="tab-content active">
+            <div class="card">
+                <div class="grid">
+                    <div class="stat"><div class="stat-label">获取节点</div><div class="stat-value" style="color:#64748b;">{{ status.proxy_count }}</div></div>
+                    <div class="stat"><div class="stat-label">可用节点</div><div class="stat-value running" id="stat-available">{{ status.available_count }}</div></div>
+                    <div class="stat"><div class="stat-label">Top N</div><div class="stat-value">{{ status.top_n }}</div></div>
+                    <div class="stat"><div class="stat-label">请求次数</div><div class="stat-value">{{ status.total_requests }}</div></div>
+                    <div class="stat"><div class="stat-label">代理端口</div><div class="stat-value">{{ status.listen_port }}</div></div>
+                    <div class="stat"><div class="stat-label">状态</div><div class="stat-value {{ 'running' if status.singbox_running else '' }}">{{ '运行中' if status.singbox_running else '停止' }}</div></div>
+                </div>
+                {% if status.current_node %}
+                <div class="current-node">
+                    <span style="color:#6ee7b7;">📍 当前节点:</span> <strong>{{ status.current_node|e }}</strong>
+                </div>
+                {% endif %}
+                <div class="usage-box">
+                    <div style="color:#60a5fa;font-weight:600;margin-bottom:8px;">使用方法</div>
+                    <div>1. 切换节点: <code>curl http://IP:{{ status.web_port }}/api/switch</code></div>
+                    <div>2. 使用代理: <code>curl -x http://IP:{{ status.listen_port }} https://api.ipify.org</code></div>
+                </div>
+            </div>
+            
+            <div class="row2">
+                <div class="card">
+                    <h3 style="margin-bottom:10px;font-size:14px;">📊 请求日志</h3>
+                    <div class="log-wrap" id="request-logs-overview">
+                        <div style="color:#64748b;text-align:center;padding:20px;">加载中...</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 style="margin-bottom:10px;font-size:14px;">📝 系统日志</h3>
+                    <div class="log-wrap">
+                        {% for l in status.logs[-30:]|reverse %}
+                        <div class="log-line">
+                            <span class="log-time">{{ l.time.split(' ')[-1] }}</span>
+                            <span class="log-level {{ l.level }}">{{ l.level }}</span>
+                            <span class="log-msg">{{ l.msg|e }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 节点列表 -->
+        <div id="tab-nodes" class="tab-content">
+            <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <h3 style="font-size:14px;">✅ 可用节点 (<span id="available-count">{{ status.available_count }}</span>) - 点击查看配置</h3>
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <input type="text" id="node-search" placeholder="搜索节点..." style="padding:5px 10px;border-radius:4px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:12px;width:150px;" oninput="filterNodes()">
+                        <button class="btn btn-sm" onclick="loadAvailableNodes()">刷新</button>
+                    </div>
+                </div>
+                <div class="table-wrap" id="available-nodes-list">
+                    <div style="color:#64748b;text-align:center;padding:20px;">加载中...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Top 节点 -->
+        <div id="tab-top" class="tab-content">
+            <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <h3 style="font-size:14px;">🏆 Top {{ status.top_n }} 节点 (按延迟排序) - 点击查看配置</h3>
+                    <button class="btn btn-sm" onclick="loadTopNodes()">刷新</button>
+                </div>
+                <div class="table-wrap" id="top-nodes-list">
+                    <div style="color:#64748b;text-align:center;padding:20px;">加载中...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 日志 -->
+        <div id="tab-logs" class="tab-content">
+            <div class="row2">
+                <div class="card">
+                    <h3 style="margin-bottom:10px;font-size:14px;">📊 请求日志</h3>
+                    <div class="log-wrap" style="max-height:600px;" id="request-logs-full">
+                        <div style="color:#64748b;text-align:center;padding:20px;">加载中...</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 style="margin-bottom:10px;font-size:14px;">📝 系统日志</h3>
+                    <div class="log-wrap" style="max-height:600px;">
+                        {% for l in status.logs|reverse %}
+                        <div class="log-line">
+                            <span class="log-time">{{ l.time.split(' ')[-1] }}</span>
+                            <span class="log-level {{ l.level }}">{{ l.level }}</span>
+                            <span class="log-msg">{{ l.msg|e }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- API -->
+        <div id="tab-api" class="tab-content">
+            <div class="card">
+                <h3 style="margin-bottom:15px;font-size:14px;">🔌 API 接口</h3>
+                <table>
+                    <tr><td><code>GET /api/switch</code></td><td>随机切换节点</td></tr>
+                    <tr><td><code>GET /api/switch/&lt;tag&gt;</code></td><td>切换到指定节点</td></tr>
+                    <tr><td><code>GET /api/test</code></td><td>测试代理并返回出口IP</td></tr>
+                    <tr><td><code>GET /api/nodes</code></td><td>获取所有节点及延迟</td></tr>
+                    <tr><td><code>GET /api/top</code></td><td>获取Top N节点</td></tr>
+                    <tr><td><code>GET /api/node/&lt;tag&gt;</code></td><td>获取节点配置(sing-box格式)</td></tr>
+                    <tr><td><code>GET /api/status</code></td><td>获取系统状态</td></tr>
+                    <tr><td><code>GET /api/request_logs</code></td><td>获取请求日志</td></tr>
+                    <tr><td><code>GET /api/reload</code></td><td>手动触发重新加载节点</td></tr>
+                    <tr><td><code>GET /api/speedtest/&lt;tag&gt;</code></td><td>测试节点下载速度</td></tr>
+                    <tr><td><code>GET /api/speedtest/&lt;tag&gt;?url=xxx</code></td><td>使用自定义URL测速</td></tr>
+                </table>
+            </div>
+            <div class="card">
+                <h3 style="margin-bottom:10px;font-size:14px;">💡 Python 示例</h3>
+                <pre><code>import requests
+
+API = "http://YOUR_IP:{{ status.web_port }}"
+PROXY = {"http": "http://YOUR_IP:{{ status.listen_port }}", "https": "http://YOUR_IP:{{ status.listen_port }}"}
+
+# 方式1: 切换后请求
+requests.get(f"{API}/api/switch")
+r = requests.get("https://api.ipify.org", proxies=PROXY)
+print(r.text)
+
+# 方式2: 使用测试接口(自动切换+请求+记录日志)
+r = requests.get(f"{API}/api/test?url=https://api.ipify.org")
+print(r.json())</code></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- 节点配置弹窗 -->
+    <div id="node-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">节点配置</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <pre><code id="modal-config"></code></pre>
+            <button class="btn" style="margin-top:10px;" onclick="copyConfig()">📋 复制配置</button>
+        </div>
+    </div>
+    
+    <script>
+        function showTab(name) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.tab[onclick="showTab('${name}')"]`).classList.add('active');
+            document.getElementById('tab-' + name).classList.add('active');
+            if (name === 'top') loadTopNodes();
+            if (name === 'nodes') loadAvailableNodes();
+        }
+        
+        function switchNode() {
+            fetch('/api/switch').then(r => r.json()).then(d => {
+                if (d.success) {
+                    alert('切换成功!\n节点: ' + d.node + '\n延迟: ' + d.delay + 'ms');
+                    location.reload();
+                } else alert('切换失败: ' + d.error);
+            });
+        }
+        
+        function testProxy() {
+            fetch('/api/test').then(r => r.json()).then(d => {
+                if (d.success) {
+                    alert('测试成功!\n出口IP: ' + d.exit_ip + '\n节点: ' + d.node + '\n延迟: ' + d.delay + 'ms');
+                    loadRequestLogs();
+                } else alert('测试失败: ' + d.error);
+            });
+        }
+        
+        function escapeHtml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+        
+        function loadTopNodes() {
+            document.getElementById('top-nodes-list').innerHTML = '<div style="color:#64748b;text-align:center;padding:20px;">加载中...</div>';
+            fetch('/api/nodes').then(r => r.json()).then(d => {
+                let html = '<table><thead><tr><th>#</th><th>类型</th><th>节点</th><th>服务器</th><th>属地</th><th>延迟</th><th>操作</th></tr></thead><tbody>';
+                d.nodes.slice(0, {{ status.top_n }}).forEach((n, i) => {
+                    const loc = n.location || '-';
+                    const safeTag = escapeHtml(n.tag);
+                    const encodedTag = encodeURIComponent(n.tag);
+                    html += '<tr><td>' + (i+1) + '</td><td class="' + escapeHtml(n.type) + '">' + escapeHtml(n.type) + '</td><td title="' + safeTag + '" onclick="showNodeConfig(\'' + encodedTag + '\')" style="cursor:pointer;">' + safeTag.substring(0,22) + '</td><td style="color:#94a3b8;">' + escapeHtml(n.server) + '</td><td style="color:#60a5fa;">' + escapeHtml(loc) + '</td><td style="color:#fbbf24;">' + n.delay + 'ms</td><td><button class="btn btn-sm" onclick="runSpeedTest(\'' + encodedTag + '\')">测速</button></td></tr>';
+                });
+                html += '</tbody></table>';
+                document.getElementById('top-nodes-list').innerHTML = html || '<div style="color:#64748b;text-align:center;padding:20px;">暂无数据</div>';
+            }).catch(e => {
+                document.getElementById('top-nodes-list').innerHTML = '<div style="color:#ef4444;text-align:center;padding:20px;">加载失败: ' + e.message + '</div>';
+            });
+        }
+        
+        function loadAvailableNodes() {
+            document.getElementById('available-nodes-list').innerHTML = '<div style="color:#64748b;text-align:center;padding:20px;">加载中...</div>';
+            fetch('/api/nodes').then(r => r.json()).then(d => {
+                document.getElementById('available-count').textContent = d.total;
+                allNodesData = d.nodes;  // 缓存数据用于搜索
+                renderNodesTable(d.nodes, 'available-nodes-list');
+            }).catch(e => {
+                document.getElementById('available-nodes-list').innerHTML = '<div style="color:#ef4444;text-align:center;padding:20px;">加载失败: ' + e.message + '</div>';
+            });
+        }
+        
+        function loadRequestLogs() {
+            fetch('/api/request_logs').then(r => r.json()).then(d => {
+                let html = '';
+                if (d.logs && d.logs.length > 0) {
+                    d.logs.slice().reverse().forEach(l => {
+                        const time = (l.time || '').split(' ')[1] || '-';
+                        const target = (l.target || '-').substring(0, 30);
+                        const exitIp = l.exit_ip || '-';
+                        const node = (l.node || '-').substring(0, 20);
+                        const delay = l.delay || 0;
+                        const method = l.method || '-';
+                        html += '<div class="req-log"><span style="color:#64748b;">' + escapeHtml(time) + '</span><span title="' + escapeHtml(l.target || '') + '">' + escapeHtml(target) + '</span><span class="exit-ip">' + escapeHtml(exitIp) + '</span><span style="color:#22d3ee;">' + escapeHtml(node) + '</span><span style="color:#fbbf24;">' + delay + 'ms</span><span style="color:#a78bfa;">' + escapeHtml(method) + '</span></div>';
+                    });
+                }
+                document.getElementById('request-logs-overview').innerHTML = html || '<div style="color:#64748b;text-align:center;padding:20px;">暂无代理请求</div>';
+                document.getElementById('request-logs-full').innerHTML = html || '<div style="color:#64748b;text-align:center;padding:20px;">暂无代理请求</div>';
+            }).catch(e => {
+                console.error('加载日志失败:', e);
+            });
+        }
+        
+        function showNodeConfig(encodedTag) {
+            const tag = decodeURIComponent(encodedTag);
+            fetch('/api/node/' + encodedTag).then(r => r.json()).then(d => {
+                if (d.config) {
+                    document.getElementById('modal-title').textContent = tag;
+                    document.getElementById('modal-config').textContent = JSON.stringify(d.config, null, 2);
+                    document.getElementById('node-modal').classList.add('show');
+                }
+            });
+        }
+        
+        function closeModal() { document.getElementById('node-modal').classList.remove('show'); }
+        function copyConfig() {
+            navigator.clipboard.writeText(document.getElementById('modal-config').textContent);
+            alert('已复制到剪贴板');
+        }
+        
+        function runSpeedTest(encodedTag) {
+            const tag = decodeURIComponent(encodedTag);
+            const testUrl = prompt('测试文件URL (留空使用默认5MB文件):', '');
+            const url = testUrl ? `/api/speedtest/${encodedTag}?url=${encodeURIComponent(testUrl)}` : `/api/speedtest/${encodedTag}`;
+            
+            document.getElementById('modal-title').textContent = '速度测试: ' + tag;
+            document.getElementById('modal-config').textContent = '测试中，请稍候...\n\n下载测试文件并计算速度...';
+            document.getElementById('node-modal').classList.add('show');
+            
+            fetch(url).then(r => r.json()).then(d => {
+                let result = '';
+                if (d.success) {
+                    result = '节点: ' + d.node + '\n\n✅ 测试成功\n\n📊 测试结果:\n   延迟: ' + d.latency + ' ms\n   下载速度: ' + d.download_speed + ' MB/s\n   文件大小: ' + (d.file_size / 1024 / 1024).toFixed(2) + ' MB\n   耗时: ' + d.time_taken + ' 秒\n\n📁 测试文件: ' + d.test_url;
+                } else {
+                    result = '节点: ' + d.node + '\n\n❌ 测试失败\n\n错误: ' + (d.error || '未知错误');
+                }
+                document.getElementById('modal-config').textContent = result;
+            }).catch(e => {
+                document.getElementById('modal-config').textContent = '测试失败: ' + e.message;
+            });
+        }
+        
+        // 全局节点数据缓存
+        let allNodesData = [];
+        
+        function filterNodes() {
+            const search = document.getElementById('node-search').value.toLowerCase();
+            const filtered = allNodesData.filter(n => 
+                n.tag.toLowerCase().includes(search) || 
+                n.server.toLowerCase().includes(search) ||
+                (n.location || '').toLowerCase().includes(search) ||
+                n.type.toLowerCase().includes(search)
+            );
+            renderNodesTable(filtered, 'available-nodes-list');
+        }
+        
+        function renderNodesTable(nodes, containerId) {
+            let html = '<table><thead><tr><th>#</th><th>类型</th><th>节点</th><th>服务器</th><th>属地</th><th>延迟</th><th>操作</th></tr></thead><tbody>';
+            nodes.forEach((n, i) => {
+                const loc = n.location || '-';
+                const safeTag = escapeHtml(n.tag);
+                const encodedTag = encodeURIComponent(n.tag);
+                html += '<tr><td>' + (i+1) + '</td><td class="' + escapeHtml(n.type) + '">' + escapeHtml(n.type) + '</td><td title="' + safeTag + '" onclick="showNodeConfig(\'' + encodedTag + '\')" style="cursor:pointer;">' + safeTag.substring(0,25) + '</td><td style="color:#94a3b8;">' + escapeHtml(n.server) + '</td><td style="color:#60a5fa;">' + escapeHtml(loc) + '</td><td style="color:#fbbf24;">' + n.delay + 'ms</td><td><button class="btn btn-sm" onclick="runSpeedTest(\'' + encodedTag + '\')">测速</button></td></tr>';
+            });
+            html += '</tbody></table>';
+            document.getElementById(containerId).innerHTML = html || '<div style="color:#64748b;text-align:center;padding:20px;">暂无数据</div>';
+        }
+        
+        function updateStatus() {
+            fetch('/api/status').then(r => r.json()).then(d => {
+                document.getElementById('stat-available').textContent = d.available_count || 0;
+            }).catch(() => {});
+        }
+        
+        // 初始化
+        loadTopNodes();
+        loadAvailableNodes();
+        loadRequestLogs();
+        setInterval(loadRequestLogs, 10000);
+        setInterval(updateStatus, 5000);  // 每5秒更新状态
+    </script>
+</body>
+</html>
