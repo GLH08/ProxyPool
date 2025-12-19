@@ -30,7 +30,7 @@ curl -O https://raw.githubusercontent.com/GLH08/ProxyPool/main/docker-compose.pr
 curl -O https://raw.githubusercontent.com/GLH08/ProxyPool/main/subscriptions.txt
 curl -O https://raw.githubusercontent.com/GLH08/ProxyPool/main/proxy_sources.txt
 
-# 编辑订阅配置
+# ⚠️ 必须：添加你的订阅链接（至少一个）
 vim subscriptions.txt  # 每行一个订阅 URL
 
 # 启动服务
@@ -40,6 +40,8 @@ docker compose -f docker-compose.prod.yml up -d
 docker compose -f docker-compose.prod.yml logs -f
 ```
 
+> **注意**：`subscriptions.txt` 默认为空（仅包含注释），启动前必须添加至少一个有效的订阅链接，否则代理池将无可用节点。
+
 ### 方式二：从源码构建
 
 ```bash
@@ -47,7 +49,7 @@ docker compose -f docker-compose.prod.yml logs -f
 git clone https://github.com/GLH08/ProxyPool.git
 cd ProxyPool
 
-# 编辑订阅配置
+# ⚠️ 必须：添加你的订阅链接（至少一个）
 vim subscriptions.txt  # 每行一个订阅 URL
 
 # 启动服务
@@ -59,7 +61,7 @@ docker compose logs -f
 
 ## 配置说明
 
-### subscriptions.txt - 订阅源
+### subscriptions.txt - 订阅源（必填）
 
 每行一个订阅 URL，支持：
 - Clash YAML 订阅
@@ -67,10 +69,13 @@ docker compose logs -f
 - Hysteria2 订阅
 
 ```
-https://your-subscription-url-1
-https://your-subscription-url-2
+# 示例格式（请替换为你自己的订阅链接）
+https://your-airport.com/api/v1/client/subscribe?token=xxx
+https://example.com/clash.yaml
 # 注释行会被忽略
 ```
+
+> **重要**：此文件默认为空模板，必须添加你自己的订阅链接才能使用。
 
 ### proxy_sources.txt - HTTP/SOCKS 代理源（可选）
 
