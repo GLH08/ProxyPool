@@ -1,0 +1,11 @@
+# 代理订阅链接配置文件
+# 每行一个订阅URL，支持以下格式：
+# - Clash YAML 订阅
+# - V2Ray/SS/Trojan 订阅链接（base64编码或明文）
+# - Hysteria2 订阅
+#
+# 支持的协议: ss, vmess, vless, trojan, hysteria2
+#
+# 示例：
+# https://your-airport.com/api/v1/client/subscribe?token=xxx
+# https://example.com/clash.yaml
