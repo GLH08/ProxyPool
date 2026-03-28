@@ -97,6 +97,8 @@ socks5|https://example.com/socks5.txt
 | `MAX_NODES` | 500 | 最大节点数量 |
 | `VERIFY_HTTP_PROXIES` | true | 是否验证 HTTP 代理可用性 |
 | `ENABLE_ONLINE_SOURCES` | false | 是否启用在线代理源 |
+| `PROXY_USERNAME` | 空 | 代理鉴权账号（强烈建议部署在公网时设置） |
+| `PROXY_PASSWORD` | 空 | 代理鉴权密码（若填写任意一个将开启代理强验证） |
 
 ## 使用方法
 
@@ -134,8 +136,10 @@ socks5|https://example.com/socks5.txt
 # 切换节点
 curl http://YOUR_IP:8080/api/switch
 
-# 使用代理访问
+# 使用代理访问 (如配置了账密，请使用 user:pass@IP)
 curl -x http://YOUR_IP:10710 https://api.ipify.org
+# 有账密的 SOCKS5/HTTP 示例:
+# curl -x http://admin:123456@YOUR_IP:10710 https://api.ipify.org
 
 # 健康检查
 curl http://YOUR_IP:8080/api/health

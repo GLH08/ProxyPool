@@ -73,6 +73,10 @@ class Config:
     # 功能开关
     enable_web_ui: bool = os.environ.get('ENABLE_WEB_UI', 'true').lower() == 'true'
     
+    # 代理认证
+    proxy_username: str = os.environ.get('PROXY_USERNAME', '')
+    proxy_password: str = os.environ.get('PROXY_PASSWORD', '')
+    
     # 节点相关
     top_n_nodes: int = int(os.environ.get('TOP_N_NODES', '50'))
     max_display_proxies: int = 500
@@ -250,6 +254,20 @@ def generate_singbox_config(outbounds: list) -> dict:
     """生成 sing-box 配置"""
     tags = [ob['tag'] for ob in outbounds]
     
+    inbound_config = {
+        "type": "mixed",
+        "tag": "mixed-in",
+        "listen": "0.0.0.0",
+        "listen_port": CFG.listen_port,
+        "sniff": True,
+        "sniff_override_destination": False
+    }
+
+    if CFG.proxy_username and CFG.proxy_password:
+        inbound_config["users"] = [
+            {"username": CFG.proxy_username, "password": CFG.proxy_password}
+        ]
+
     return {
         "log": {
             "level": "info",
@@ -262,14 +280,7 @@ def generate_singbox_config(outbounds: list) -> dict:
                 "default_mode": "rule"
             }
         },
-        "inbounds": [{
-            "type": "mixed",
-            "tag": "mixed-in",
-            "listen": "0.0.0.0",
-            "listen_port": CFG.listen_port,
-            "sniff": True,
-            "sniff_override_destination": False
-        }],
+        "inbounds": [inbound_config],
         "outbounds": [
             {
                 "type": "urltest",

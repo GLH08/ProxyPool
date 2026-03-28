@@ -7,7 +7,8 @@ services:
     container_name: proxy-pool
     restart: unless-stopped
     ports:
-      - "8012:8080"    # Web UI
+      - "8012:8080"    # Web UI 端口
+      - "10710:10710"  # 代理对外端口 (混淆入站 HTTP/SOCKS5)
     volumes:
       - ./config:/app/config
       - ./subscriptions.txt:/app/subscriptions.txt:ro
@@ -16,6 +17,9 @@ services:
       - TZ=Asia/Shanghai
       - TOP_N_NODES=50
       - INTERVAL_SECONDS=1800
+      # 强烈建议在此设定密码，防止公网被扫描并滥用
+      - PROXY_USERNAME=admin
+      - PROXY_PASSWORD=123456
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://127.0.0.1:8080/api/health"]
       interval: 60s

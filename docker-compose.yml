@@ -16,6 +16,9 @@ services:
       - WEB_PORT=8080
       - CLASH_API_PORT=9090
       - ENABLE_WEB_UI=true
+      # 设置代理认证账密（可选，留空则为无密码模式）
+      - PROXY_USERNAME=
+      - PROXY_PASSWORD=
       - MAX_NODES=500
       - TOP_N_NODES=50
       - AUTO_SWITCH_INTERVAL=0
