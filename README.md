@@ -121,48 +121,76 @@ socks5|https://example.com/socks5.txt
 
 | 接口 | 方法 | 说明 |
 |------|------|------|
-| `/api/switch` | GET/POST | 随机切换节点 |
+| `/api/status` | GET | 获取系统状态、当前节点、可用节点数等信息 |
+| `/api/switch` | GET/POST | 随机切换到 Top N 节点 |
 | `/api/switch/<tag>` | GET/POST | 切换到指定节点 |
-| `/api/test` | GET | 测试代理出口 IP |
+| `/api/test?url=<target>` | GET | 切换节点后测试目标 URL，默认 `https://api.ipify.org` |
 | `/api/nodes` | GET | 获取所有可用节点及延迟 |
 | `/api/top` | GET | 获取 Top N 节点 |
 | `/api/node/<tag>` | GET | 获取节点配置（sing-box 格式） |
-| `/api/status` | GET | 获取系统状态 |
-| `/api/health` | GET | 健康检查（真正测试代理可用性） |
 | `/api/request_logs` | GET | 获取请求日志 |
-| `/api/speedtest/<tag>` | GET | 测试节点下载速度 |
 | `/api/reload` | GET | 手动重新加载节点 |
+| `/api/speedtest/<tag>?url=<file>` | GET | 测试节点下载速度，可选自定义测速文件 |
+| `/api/speedtest_cache` | GET | 获取最近一次测速缓存 |
+| `/api/health` | GET | 健康检查（真正测试代理可用性） |
 | `/api/restart_singbox` | POST | 手动重启 sing-box |
 
-### 代理使用示例
+### API 使用示例
 
 ```bash
-# 切换节点
+# 查看状态
+curl http://YOUR_IP:8080/api/status
+
+# 随机切换节点
 curl http://YOUR_IP:8080/api/switch
 
-# 使用代理访问 (如配置了账密，请使用 user:pass@IP)
-curl -x http://YOUR_IP:10710 https://api.ipify.org
-# 有账密的 SOCKS5/HTTP 示例:
-# curl -x http://admin:123456@YOUR_IP:10710 https://api.ipify.org
+# 测试出口 IP（自动切换 + 发起请求）
+curl "http://YOUR_IP:8080/api/test?url=https://api.ipify.org"
 
-# 健康检查
-curl http://YOUR_IP:8080/api/health
+# 获取 Top 节点
+curl http://YOUR_IP:8080/api/top
+
+# 查看测速缓存
+curl http://YOUR_IP:8080/api/speedtest_cache
+
+# 手动重启 sing-box
+curl -X POST http://YOUR_IP:8080/api/restart_singbox
+```
+
+```bash
+# 直接使用代理访问目标站点
+# 无鉴权:
+curl -x http://YOUR_IP:10710 https://api.ipify.org
+# 开启鉴权后:
+# curl -x http://admin:123456@YOUR_IP:10710 https://api.ipify.org
 ```
 
 ```python
 import requests
 
 API = "http://YOUR_IP:8080"
+# 开启鉴权时请改为 http://user:pass@YOUR_IP:10710
 PROXY = {"http": "http://YOUR_IP:10710", "https": "http://YOUR_IP:10710"}
 
-# 切换节点后请求
+status = requests.get(f"{API}/api/status").json()
+print(status)
+
 requests.get(f"{API}/api/switch")
 r = requests.get("https://api.ipify.org", proxies=PROXY)
 print(f"出口 IP: {r.text}")
 
-# 使用测试接口（自动切换 + 请求 + 记录日志）
-r = requests.get(f"{API}/api/test?url=https://api.ipify.org")
-print(r.json())
+result = requests.get(f"{API}/api/test", params={"url": "https://api.ipify.org"}).json()
+print(result)
+```
+
+```javascript
+const API = 'http://YOUR_IP:8080';
+
+const status = await fetch(`${API}/api/status`).then(r => r.json());
+console.log(status);
+
+const testResult = await fetch(`${API}/api/test?url=${encodeURIComponent('https://api.ipify.org')}`).then(r => r.json());
+console.log(testResult);
 ```
 
 ## 项目结构

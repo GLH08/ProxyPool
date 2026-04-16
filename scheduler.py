@@ -20,6 +20,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib.parse import quote
 
 # 上海时区 (UTC+8)
 SHANGHAI_TZ = timezone(timedelta(hours=8))
@@ -205,6 +206,21 @@ def log_request(target: str, exit_ip: str, node: str, delay: int, client: str, m
     }
     proxy_status.append_request_log(log_entry)
     print(f"[{timestamp}] [REQUEST] {method} | {target} | {exit_ip} | {node} | {delay}ms | {client}", flush=True)
+
+
+def get_local_proxy_url() -> str:
+    """返回项目内部自检使用的本地代理 URL。"""
+    if CFG.proxy_username and CFG.proxy_password:
+        username = quote(CFG.proxy_username, safe='')
+        password = quote(CFG.proxy_password, safe='')
+        return f"http://{username}:{password}@127.0.0.1:{CFG.listen_port}"
+    return f"http://127.0.0.1:{CFG.listen_port}"
+
+
+def get_local_proxy_mapping() -> Dict[str, str]:
+    """返回 requests 可直接使用的本地代理配置。"""
+    proxy_url = get_local_proxy_url()
+    return {'http': proxy_url, 'https': proxy_url}
 
 
 # ==================== IP 属地查询 ====================
@@ -647,8 +663,7 @@ def test_node_speed(node_tag: str, test_url: Optional[str] = None) -> Dict[str, 
         result['error'] = 'Failed to switch node'
         return result
     
-    proxy_url = f"http://127.0.0.1:{CFG.listen_port}"
-    proxies = {'http': proxy_url, 'https': proxy_url}
+    proxies = get_local_proxy_mapping()
     
     try:
         # 测试延迟
@@ -705,6 +720,7 @@ def start_web_server() -> None:
             'available_count': proxy_status.get('available_count', 0),
             'singbox_running': proxy_status.get('singbox_running', False),
             'listen_port': proxy_status.get('listen_port'),
+            'proxy_auth_enabled': bool(CFG.proxy_username and CFG.proxy_password),
             'total_requests': proxy_status.get('total_requests', 0),
             'current_node': proxy_status.get('current_node'),
             'top_n': CFG.top_n_nodes,
@@ -754,8 +770,7 @@ def start_web_server() -> None:
             return jsonify({'success': False, 'error': 'Switch failed'})
         
         try:
-            proxy_url = f"http://127.0.0.1:{CFG.listen_port}"
-            resp = req.get(target_url, proxies={'http': proxy_url, 'https': proxy_url}, timeout=10, verify=False)
+            resp = req.get(target_url, proxies=get_local_proxy_mapping(), timeout=10, verify=False)
             exit_ip = resp.text.strip()[:50]
             
             log_request(target_url, exit_ip, switch_result.get('node', ''), switch_result.get('delay', 0), client_ip, 'test')
@@ -857,10 +872,9 @@ def start_web_server() -> None:
         
         # 测试代理是否真正可用
         try:
-            proxy_url = f"http://127.0.0.1:{CFG.listen_port}"
             resp = req.get(
                 "http://www.gstatic.com/generate_204",
-                proxies={'http': proxy_url, 'https': proxy_url},
+                proxies=get_local_proxy_mapping(),
                 timeout=5,
                 verify=False
             )

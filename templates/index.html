@@ -95,7 +95,11 @@
                 <div class="usage-box">
                     <div style="color:#60a5fa;font-weight:600;margin-bottom:8px;">使用方法</div>
                     <div>1. 切换节点: <code>curl http://IP:{{ status.web_port }}/api/switch</code></div>
+                    {% if status.proxy_auth_enabled %}
+                    <div>2. 使用代理: <code>curl -x http://USER:PASSWORD@IP:{{ status.listen_port }} https://api.ipify.org</code></div>
+                    {% else %}
                     <div>2. 使用代理: <code>curl -x http://IP:{{ status.listen_port }} https://api.ipify.org</code></div>
+                    {% endif %}
                 </div>
             </div>
             
@@ -179,34 +183,60 @@
             <div class="card">
                 <h3 style="margin-bottom:15px;font-size:14px;">🔌 API 接口</h3>
                 <table>
-                    <tr><td><code>GET /api/switch</code></td><td>随机切换节点</td></tr>
-                    <tr><td><code>GET /api/switch/&lt;tag&gt;</code></td><td>切换到指定节点</td></tr>
-                    <tr><td><code>GET /api/test</code></td><td>测试代理并返回出口IP</td></tr>
-                    <tr><td><code>GET /api/nodes</code></td><td>获取所有节点及延迟</td></tr>
-                    <tr><td><code>GET /api/top</code></td><td>获取Top N节点</td></tr>
-                    <tr><td><code>GET /api/node/&lt;tag&gt;</code></td><td>获取节点配置(sing-box格式)</td></tr>
-                    <tr><td><code>GET /api/status</code></td><td>获取系统状态</td></tr>
+                    <tr><td><code>GET /api/status</code></td><td>获取系统状态与当前节点</td></tr>
+                    <tr><td><code>GET|POST /api/switch</code></td><td>随机切换到 Top N 节点</td></tr>
+                    <tr><td><code>GET|POST /api/switch/&lt;tag&gt;</code></td><td>切换到指定节点</td></tr>
+                    <tr><td><code>GET /api/test?url=&lt;target&gt;</code></td><td>切换节点后测试目标 URL，默认 <code>https://api.ipify.org</code></td></tr>
+                    <tr><td><code>GET /api/nodes</code></td><td>获取所有可用节点及延迟</td></tr>
+                    <tr><td><code>GET /api/top</code></td><td>获取 Top N 节点</td></tr>
+                    <tr><td><code>GET /api/node/&lt;tag&gt;</code></td><td>获取节点完整配置（sing-box 格式）</td></tr>
                     <tr><td><code>GET /api/request_logs</code></td><td>获取请求日志</td></tr>
-                    <tr><td><code>GET /api/reload</code></td><td>手动触发重新加载节点</td></tr>
-                    <tr><td><code>GET /api/speedtest/&lt;tag&gt;</code></td><td>测试节点下载速度</td></tr>
-                    <tr><td><code>GET /api/speedtest/&lt;tag&gt;?url=xxx</code></td><td>使用自定义URL测速</td></tr>
+                    <tr><td><code>GET /api/reload</code></td><td>重新加载订阅节点</td></tr>
+                    <tr><td><code>GET /api/speedtest/&lt;tag&gt;?url=&lt;file&gt;</code></td><td>测试指定节点下载速度，可选自定义测速文件</td></tr>
+                    <tr><td><code>GET /api/speedtest_cache</code></td><td>读取最近测速缓存</td></tr>
+                    <tr><td><code>GET /api/health</code></td><td>健康检查，包含代理可用性测试</td></tr>
+                    <tr><td><code>POST /api/restart_singbox</code></td><td>手动重启 sing-box</td></tr>
                 </table>
             </div>
-            <div class="card">
-                <h3 style="margin-bottom:10px;font-size:14px;">💡 Python 示例</h3>
-                <pre><code>import requests
+            <div class="row2">
+                <div class="card">
+                    <h3 style="margin-bottom:10px;font-size:14px;">💡 cURL 示例</h3>
+                    <pre><code># 查看状态
+curl http://YOUR_IP:{{ status.web_port }}/api/status
+
+# 随机切换节点
+curl http://YOUR_IP:{{ status.web_port }}/api/switch
+
+# 测试出口 IP
+curl "http://YOUR_IP:{{ status.web_port }}/api/test?url=https://api.ipify.org"
+
+# 获取节点列表
+curl http://YOUR_IP:{{ status.web_port }}/api/nodes
+
+# 手动重启 sing-box
+curl -X POST http://YOUR_IP:{{ status.web_port }}/api/restart_singbox</code></pre>
+                </div>
+                <div class="card">
+                    <h3 style="margin-bottom:10px;font-size:14px;">💡 Python 示例</h3>
+                    <pre><code>import requests
 
 API = "http://YOUR_IP:{{ status.web_port }}"
+{% if status.proxy_auth_enabled %}
+PROXY = {"http": "http://USER:PASSWORD@YOUR_IP:{{ status.listen_port }}", "https": "http://USER:PASSWORD@YOUR_IP:{{ status.listen_port }}"}
+{% else %}
 PROXY = {"http": "http://YOUR_IP:{{ status.listen_port }}", "https": "http://YOUR_IP:{{ status.listen_port }}"}
+{% endif %}
 
-# 方式1: 切换后请求
+status = requests.get(f"{API}/api/status").json()
+print(status)
+
 requests.get(f"{API}/api/switch")
 r = requests.get("https://api.ipify.org", proxies=PROXY)
 print(r.text)
 
-# 方式2: 使用测试接口(自动切换+请求+记录日志)
-r = requests.get(f"{API}/api/test?url=https://api.ipify.org")
-print(r.json())</code></pre>
+result = requests.get(f"{API}/api/test", params={"url": "https://api.ipify.org"}).json()
+print(result)</code></pre>
+                </div>
             </div>
         </div>
     </div>
