@@ -21,6 +21,8 @@
 
 ### 方式一：从 GHCR 拉取镜像（推荐）
 
+GHCR 会自动发布多架构镜像，当前支持 `linux/amd64` 和 `linux/arm64`，Docker 会按宿主机架构自动拉取对应版本。
+
 ```bash
 # 创建目录
 mkdir proxy-pool && cd proxy-pool
@@ -43,6 +45,8 @@ docker compose -f docker-compose.prod.yml logs -f
 > **注意**：`subscriptions.txt` 默认为空（仅包含注释），启动前必须添加至少一个有效的订阅链接，否则代理池将无可用节点。
 
 ### 方式二：从源码构建
+
+源码构建同样支持 `amd64` 和 `arm64`；在 ARM 设备上执行 `docker compose up -d` 时，会基于当前架构自动构建正确的镜像。
 
 ```bash
 # 克隆项目
@@ -183,7 +187,7 @@ ProxyPool/
 
 ## Docker 镜像
 
-镜像托管在 GitHub Container Registry (GHCR)：
+镜像托管在 GitHub Container Registry (GHCR)，GitHub Actions 会自动构建并发布 `linux/amd64` 和 `linux/arm64` 多架构镜像清单：
 
 ```bash
 # 拉取最新版本

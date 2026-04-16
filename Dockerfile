@@ -2,6 +2,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+ARG TARGETARCH
+ARG TARGETVARIANT
+ARG SINGBOX_VERSION=1.10.1
+
 # 设置时区为上海
 ENV TZ=Asia/Shanghai
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -9,13 +13,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && rm -rf /var/lib/apt/lists/*
 
-# 下载 sing-box
-ARG SINGBOX_VERSION=1.10.1
-RUN wget -q https://github.com/SagerNet/sing-box/releases/download/v${SINGBOX_VERSION}/sing-box-${SINGBOX_VERSION}-linux-amd64.tar.gz \
-    && tar -xzf sing-box-${SINGBOX_VERSION}-linux-amd64.tar.gz \
-    && mv sing-box-${SINGBOX_VERSION}-linux-amd64/sing-box /usr/local/bin/sing-box \
+# 下载与当前目标平台匹配的 sing-box
+RUN set -eux; \
+    case "${TARGETARCH}${TARGETVARIANT}" in \
+        amd64) singbox_arch='amd64' ;; \
+        arm64) singbox_arch='arm64' ;; \
+        armv7) singbox_arch='armv7' ;; \
+        armv6) singbox_arch='armv6' ;; \
+        *) echo "Unsupported sing-box architecture: ${TARGETARCH}${TARGETVARIANT}" >&2; exit 1 ;; \
+    esac; \
+    singbox_package="sing-box-${SINGBOX_VERSION}-linux-${singbox_arch}.tar.gz"; \
+    wget -q "https://github.com/SagerNet/sing-box/releases/download/v${SINGBOX_VERSION}/${singbox_package}" -O /tmp/sing-box.tar.gz; \
+    tar -xzf /tmp/sing-box.tar.gz -C /tmp; \
+    mv "/tmp/sing-box-${SINGBOX_VERSION}-linux-${singbox_arch}/sing-box" /usr/local/bin/sing-box \
     && chmod +x /usr/local/bin/sing-box \
-    && rm -rf sing-box-${SINGBOX_VERSION}-linux-amd64*
+    && rm -rf /tmp/sing-box.tar.gz "/tmp/sing-box-${SINGBOX_VERSION}-linux-${singbox_arch}"
 
 # 安装依赖
 COPY requirements.txt .
