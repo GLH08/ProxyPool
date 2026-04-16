@@ -58,11 +58,42 @@ ENABLE_ONLINE_SOURCES = CFG.enable_online_sources
 SCHEDULED_ONLINE_SOURCES = CFG.scheduled_online_sources
 
 
+SS2022_KEY_LENGTHS = {
+    '2022-blake3-aes-128-gcm': 16,
+    '2022-blake3-aes-256-gcm': 32,
+    '2022-blake3-chacha20-poly1305': 32,
+}
+
+
 def _b64_decode(s: str) -> bytes:
     """Base64 解码，自动处理 padding"""
     s = s.strip().replace('-', '+').replace('_', '/')
     padding = (-len(s)) % 4
     return base64.b64decode(s + ('=' * padding))
+
+
+def normalize_shadowsocks_password(method: str, password: str) -> Optional[str]:
+    """规范化并校验 Shadowsocks 密码。
+
+    SS URI 中的 password 可能仍带有 URL 编码；2022 系列密码还必须是合法的 base64 key。
+    """
+    password = unquote(password or '').strip()
+    expected_len = SS2022_KEY_LENGTHS.get(method)
+    if not expected_len:
+        return password
+
+    parts = password.split(':')
+    if len(parts) not in (1, 2):
+        return None
+
+    try:
+        for part in parts:
+            if len(_b64_decode(part)) != expected_len:
+                return None
+    except Exception:
+        return None
+
+    return password
 
 
 def parse_ss(uri: str) -> Optional[Dict[str, Any]]:
@@ -106,6 +137,10 @@ def parse_ss(uri: str) -> Optional[Dict[str, Any]]:
             except Exception:
                 return None
         
+        password = normalize_shadowsocks_password(method, password)
+        if password is None:
+            return None
+
         return {
             'type': 'shadowsocks',
             'tag': tag or f'ss-{host}',
@@ -382,13 +417,16 @@ def parse_clash_proxies(proxies: List[Dict]) -> List[Dict[str, Any]]:
         
         try:
             if ptype == 'ss':
+                password = normalize_shadowsocks_password(p['cipher'], p['password'])
+                if password is None:
+                    continue
                 outbound = {
                     'type': 'shadowsocks',
                     'tag': sanitize_tag(p.get('name', ''), server, port),
                     'server': server,
                     'server_port': port,
                     'method': p['cipher'],
-                    'password': p['password']
+                    'password': password
                 }
                 outbounds.append(outbound)
             
@@ -865,3 +903,4 @@ def fetch_all_subscriptions() -> tuple:
     stats['before_dedup'] = len(all_outbounds)
     
     return unique, stats
+
